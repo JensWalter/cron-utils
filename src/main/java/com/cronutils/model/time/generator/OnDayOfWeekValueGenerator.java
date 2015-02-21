@@ -8,8 +8,10 @@ import com.cronutils.model.field.FieldExpression;
 import com.cronutils.model.field.On;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.Validate;
-import org.joda.time.DateTime;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoField;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 /*
  * Copyright 2015 jmrozanec
@@ -93,7 +95,7 @@ class OnDayOfWeekValueGenerator extends FieldValueGenerator {
     }
 
     private int generateHashValues(On on, int year, int month){
-        int dowForFirstDoM = new DateTime(year, month, 1, 1, 1).getDayOfWeek();//1-7
+        int dowForFirstDoM = LocalDateTime.of(year, month, 1, 1, 1).get(ChronoField.DAY_OF_WEEK);//1-7
         int requiredDoW = ConstantsMapper.weekDayMapping(mondayDoWValue, ConstantsMapper.JODATIME_WEEK_DAY, on.getTime());//to normalize to joda-time value
         int requiredNth = on.getNth();
         int baseDay = 1;//day 1 from given month
@@ -111,20 +113,20 @@ class OnDayOfWeekValueGenerator extends FieldValueGenerator {
     }
 
     private int generateLValues(On on, int year, int month) throws NoSuchValueException {
-        int lastDoM = new DateTime(year, month, 1, 1, 1).dayOfMonth().getMaximumValue();
-        DateTime lastDoMDateTime = new DateTime(year, month, lastDoM, 1, 1);
-        int dowForLastDoM = lastDoMDateTime.getDayOfWeek();//1-7
+        int lastDoM = LocalDateTime.of(year, month, 1, 1, 1).with(TemporalAdjusters.lastDayOfMonth()).getDayOfMonth();
+        LocalDateTime lastDoMDateTime = LocalDateTime.of(year, month, lastDoM, 1, 1);
+        int dowForLastDoM = lastDoMDateTime.get(ChronoField.DAY_OF_WEEK);//1-7
         int requiredDoW = ConstantsMapper.weekDayMapping(mondayDoWValue, ConstantsMapper.JODATIME_WEEK_DAY, on.getTime());//to normalize to joda-time value
         int dowDiff = dowForLastDoM - requiredDoW;
 
         if(dowDiff==0){
-            return lastDoMDateTime.dayOfMonth().get();
+            return lastDoMDateTime.get(ChronoField.DAY_OF_MONTH);
         }
         if(dowDiff<0){
-            return lastDoMDateTime.minusDays(dowForLastDoM+(7-requiredDoW)).dayOfMonth().get();
+            return lastDoMDateTime.minusDays(dowForLastDoM + (7 - requiredDoW)).get(ChronoField.DAY_OF_MONTH);
         }
         if(dowDiff>0){
-            return lastDoMDateTime.minusDays(dowDiff).dayOfMonth().get();
+            return lastDoMDateTime.minusDays(dowDiff).get(ChronoField.DAY_OF_MONTH);
         }
         throw new NoSuchValueException();
     }

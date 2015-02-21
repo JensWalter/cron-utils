@@ -1,9 +1,8 @@
 package com.cronutils.mapper.format;
 
 import org.apache.commons.lang3.Validate;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
 
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 /*
  * Copyright 2015 jmrozanec
@@ -40,7 +39,7 @@ public class DateTimeFormatBuilder {
         for(String part : parts){
             builder.append(String.format("%s ", localeStrategy.retrievePattern(part)));
         }
-        return DateTimeFormat.forPattern(builder.toString().trim());
+        return DateTimeFormatter.ofPattern(builder.toString().trim());
     }
 
     private DateTimeFormatLocaleStrategy createLocaleStrategyInstance(){

@@ -1,7 +1,6 @@
 package com.cronutils.mapper.format;
 
-import org.joda.time.DateTimeZone;
-
+import java.time.ZoneId;
 import java.util.Map;
 /*
  * Copyright 2015 jmrozanec
@@ -83,11 +82,15 @@ public abstract class DateTimeFormatLocaleStrategy {
 
     private boolean isTimezone(String string){
         try{
-            DateTimeZone.forID(string);
+            ZoneId zone = ZoneId.of(string);
+            if(zone!=null){
+                return true;
+            } else {
+                return false;
+            }
         }catch (IllegalArgumentException e){
             return false;
         }
-        return true;
     }
 
     private String timezonePattern(String string){

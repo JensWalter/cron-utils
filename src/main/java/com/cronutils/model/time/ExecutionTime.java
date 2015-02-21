@@ -12,10 +12,11 @@ import com.cronutils.model.time.generator.NoSuchValueException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.Validate;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
-import org.joda.time.Interval;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoField;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Map;
 
@@ -87,17 +88,17 @@ public class ExecutionTime {
 
     /**
      * Provide nearest date for next execution.
-     * @param date - jodatime DateTime instance. If null, a NullPointerException will be raised.
+     * @param date - LocalDateTime instance. If null, a NullPointerException will be raised.
      * @return DateTime instance, never null. Next execution time.
      */
-    public DateTime nextExecution(DateTime date) {
+    public LocalDateTime nextExecution(LocalDateTime date) {
         Validate.notNull(date);
         //we request next second value. Ask for a shift, since if matches, we stay at same time as reference time
-        NearestValue secondsValue = seconds.getNextValue(date.getSecondOfMinute(), 1);
+        NearestValue secondsValue = seconds.getNextValue(date.getSecond(), 1);
         //next minute value. If second shifted, lets shift
-        NearestValue minutesValue = minutes.getNextValue(date.getMinuteOfHour(), secondsValue.getShifts());
+        NearestValue minutesValue = minutes.getNextValue(date.getMinute(), secondsValue.getShifts());
         //next hour value. If minutes shifted, lets shift
-        NearestValue hoursValue = hours.getNextValue(date.getHourOfDay(), minutesValue.getShifts());
+        NearestValue hoursValue = hours.getNextValue(date.getHour(), minutesValue.getShifts());
         NearestValue monthsValue;
 
         /*
@@ -108,14 +109,14 @@ public class ExecutionTime {
         int month = 1;
         int day = 1;
         //if current month is contained, we calculate days and try
-        if(months.getValues().contains(date.getMonthOfYear())){
-            monthsValue = new NearestValue(date.getMonthOfYear(), 0);
+        if(months.getValues().contains(date.getMonthValue())){
+            monthsValue = new NearestValue(date.getMonthValue(), 0);
             month = monthsValue.getValue();
             day = date.getDayOfMonth();
         } else {
             //if current month is not contained, get the nearest match,
             // and reset reference day to 1, since first day match in month will be ok
-            monthsValue = months.getNextValue(date.getMonthOfYear(), 0);
+            monthsValue = months.getNextValue(date.getMonthValue(), 0);
             month = monthsValue.getValue();
             day = 1;
         }
@@ -151,7 +152,7 @@ public class ExecutionTime {
                         .getNextValue(date.getYear(), monthsValue.getShifts());
 
         return
-                new DateTime(
+                LocalDateTime.of(
                         yearsValue.getValue(),
                         monthsValue.getValue(),
                         daysValue.getValue(),
@@ -163,26 +164,26 @@ public class ExecutionTime {
 
     /**
      * Provide nearest time for next execution.
-     * @param date - jodatime DateTime instance. If null, a NullPointerException will be raised.
-     * @return jodatime Duration instance, never null. Time to next execution.
+     * @param date - LocalDateTime instance. If null, a NullPointerException will be raised.
+     * @return Duration instance, never null. Time to next execution.
      */
-    public Duration timeToNextExecution(DateTime date){
-        return new Interval(date, nextExecution(date)).toDuration();
+    public Duration timeToNextExecution(LocalDateTime date){
+        return Duration.between(date,nextExecution(date));
     }
 
     /**
      * Provide nearest date for last execution.
-     * @param date - jodatime DateTime instance. If null, a NullPointerException will be raised.
+     * @param date - LocalDateTime instance. If null, a NullPointerException will be raised.
      * @return DateTime instance, never null. Last execution time.
      */
-    public DateTime lastExecution(DateTime date){
+    public LocalDateTime lastExecution(LocalDateTime date){
         Validate.notNull(date);
         //we request previous second value. Ask for a shift, since if matches, we stay at same time as reference time
-        NearestValue secondsValue = seconds.getPreviousValue(date.getSecondOfMinute(), 1);
+        NearestValue secondsValue = seconds.getPreviousValue(date.getSecond(), 1);
         //prev minute value. If second shifted, lets shift
-        NearestValue minutesValue = minutes.getPreviousValue(date.getMinuteOfHour(), secondsValue.getShifts());
+        NearestValue minutesValue = minutes.getPreviousValue(date.getMinute(), secondsValue.getShifts());
         //prev hour value. If minutes shifted, lets shift
-        NearestValue hoursValue = hours.getPreviousValue(date.getHourOfDay(), minutesValue.getShifts());
+        NearestValue hoursValue = hours.getPreviousValue(date.getHour(), minutesValue.getShifts());
         NearestValue monthsValue;
 
         /*
@@ -193,16 +194,16 @@ public class ExecutionTime {
         int month = 1;
         int day = 1;
         //if current month is contained, we calculate days and try
-        if(months.getValues().contains(date.getMonthOfYear())){
-            monthsValue = new NearestValue(date.getMonthOfYear(), 0);
+        if(months.getValues().contains(date.getMonthValue())){
+            monthsValue = new NearestValue(date.getMonthValue(), 0);
             month = monthsValue.getValue();
             day = date.getDayOfMonth();
         } else {
             //if current month is not contained, get the nearest match,
             // and reset reference day to last day in month, since last day match in month will be ok
-            monthsValue = months.getPreviousValue(date.getMonthOfYear(), 0);
+            monthsValue = months.getPreviousValue(date.getMonthValue(), 0);
             month = monthsValue.getValue();
-            day = new DateTime(date.getYear(), month, 1, 1, 1).dayOfMonth().withMaximumValue().getDayOfMonth();
+            day = LocalDateTime.of(date.getYear(), month, 1, 1, 1).with(java.time.temporal.TemporalAdjusters.lastDayOfMonth()).getDayOfMonth();
         }
         TimeNode days =
                 new TimeNode(
@@ -237,7 +238,7 @@ public class ExecutionTime {
                         .getPreviousValue(date.getYear(), monthsValue.getShifts());
 
         return
-                new DateTime(
+                LocalDateTime.of(
                         yearsValue.getValue(),
                         monthsValue.getValue(),
                         daysValue.getValue(),
@@ -249,18 +250,18 @@ public class ExecutionTime {
 
     /**
      * Provide nearest time from last execution.
-     * @param date - jodatime DateTime instance. If null, a NullPointerException will be raised.
-     * @return jodatime Duration instance, never null. Time from last execution.
+     * @param date - LocalDateTime instance. If null, a NullPointerException will be raised.
+     * @return Duration instance, never null. Time from last execution.
      */
-    public Duration timeFromLastExecution(DateTime date){
-        return new Interval(lastExecution(date), date).toDuration();
+    public Duration timeFromLastExecution(LocalDateTime date){
+        return Duration.between(lastExecution(date),date);
     }
 
     private List<Integer> generateDayCandidates(int year, int month, WeekDay mondayDoWValue){
-        DateTime date = new DateTime(year, month, 1,1,1);
+        LocalDateTime date = LocalDateTime.of(year, month, 1,1,1);
         List<Integer> candidates = Lists.newArrayList();
-        candidates.addAll(FieldValueGeneratorFactory.createDayOfMonthValueGeneratorInstance(daysOfMonthCronField, year, month).generateCandidates(1, date.dayOfMonth().getMaximumValue()));
-        candidates.addAll(FieldValueGeneratorFactory.createDayOfWeekValueGeneratorInstance(daysOfWeekCronField, year, month, mondayDoWValue).generateCandidates(1, date.dayOfMonth().getMaximumValue()));
+        candidates.addAll(FieldValueGeneratorFactory.createDayOfMonthValueGeneratorInstance(daysOfMonthCronField, year, month).generateCandidates(1, date.with(TemporalAdjusters.lastDayOfMonth()).getDayOfMonth()));
+        candidates.addAll(FieldValueGeneratorFactory.createDayOfWeekValueGeneratorInstance(daysOfWeekCronField, year, month, mondayDoWValue).generateCandidates(1, date.with(TemporalAdjusters.lastDayOfMonth()).getDayOfMonth()));
         return candidates;
     }
 

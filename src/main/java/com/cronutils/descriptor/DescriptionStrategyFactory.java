@@ -3,8 +3,12 @@ package com.cronutils.descriptor;
 import com.cronutils.model.field.FieldExpression;
 import com.cronutils.model.field.On;
 import com.google.common.base.Function;
-import org.joda.time.DateTime;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ResourceBundle;
 /*
 * Copyright 2014 jmrozanec
@@ -29,7 +33,8 @@ class DescriptionStrategyFactory {
         final Function<Integer, String> nominal = new Function<Integer, String>() {
             @Override
             public String apply(Integer integer) {
-                return new DateTime().withDayOfWeek(integer).dayOfWeek().getAsText(bundle.getLocale());
+                DateTimeFormatter dtf = DateTimeFormatter.ofPattern("E",bundle.getLocale());
+                return dtf.format(LocalDateTime.now().with(DayOfWeek.of(integer)));
             }
         };
 
@@ -98,7 +103,8 @@ class DescriptionStrategyFactory {
                 new Function<Integer, String>() {
                     @Override
                     public String apply(Integer integer) {
-                        return new DateTime().withMonthOfYear(integer).monthOfYear().getAsText(bundle.getLocale());
+                        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("L", bundle.getLocale());
+                        return dtf.format(LocalDate.of(2015, integer, 01));
                     }
                 },
                 expression
